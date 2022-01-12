@@ -1,14 +1,10 @@
 //. app.js
-//. - [x] (1) '/' の id を '0' として作り直す（ '' だと未指定時との区別が付かない）
-//. - [x] (2) GET / 時は parent_id = '0' で、かつ同じ id の中で最新の updated を持つレコードだけを参照するよう変更する
 //.   - https://qiita.com/nogitsune413/items/f413268d01b4ea2394b1
 //.   - `select ra.id, ra.parent_id, ra.name, ra.updated from records as ra inner join (select id, parent_id, max(updated) as maxupdated from records group by id, parent_id) as rb on ra.id = rb.id and ra.parent_id = rb.parent_id and ra.updated = rb.maxupdated;`
-//. - [x] (3) is_deleted = 1 を考慮した上で存在確認する
-//. - [ ] (4) ただし is_deleted = 1 でも検索できる関数も必要
-//. - [x] (5) 存在しないフォルダ／ファイルや、削除済みフォルダ／ファイルを指定した場合、エラー処理ではなく「存在しない」ことがわかるような結果になるべき
-//. - [x] (6) ファイルやフォルダの移動はパスで指定された移動先をパス id に変換してから行う必要がある
-//. - [x] (7) GET /a/a.png が file not found
-//. - [x] (8) ファイル名変更
+
+//. - [ ] is_deleted = 1 でも検索できる関数
+
+//. URL パラメータが req.originalUrl に含まれてしまう
 
 var express = require( 'express' ),
     multer = require( 'multer' ),
@@ -161,6 +157,16 @@ app.all( '/*', async function( req, res, next ){
       owner_id = owner_id.substr( 6 );
     }
     var path = req.originalUrl;
+
+    if( path.indexOf( '?' ) > -1 ){
+      var tmp = path.split( '?' );
+      path = tmp[0];
+      tmp[1].split( '&' ).forEach( function( param ){
+        var p = param.split( '=' );
+        req.query[p[0]] = p[1];
+      });
+    }
+
     var is_folder = false;
     if( path.endsWith( '/' ) ){
       is_folder = true;
@@ -214,6 +220,11 @@ app.all( '/*', async function( req, res, next ){
             if( !r.status ){
               res.status( 400 );
             }
+            if( r.records && r.records.length ){
+              for( var i = 0; i < r.records.length; i ++ ){
+                if( r.records[i].body ){ r.records[i].body = "...(" + r.records[i].body.length + ")..."; }
+              }
+            }
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }else{
@@ -227,7 +238,10 @@ app.all( '/*', async function( req, res, next ){
               var record = r.record;
               var meta = req.query.meta;
               if( meta ){
-                delete record['body'];
+                //delete record['body'];
+                if( record['body'] ){ record['body'] = "...(" + record['body'].length + ")..."; }
+                record['created'] = parseInt( record['created'] );
+                record['updated'] = parseInt( record['updated'] );
                 res.write( JSON.stringify( record, null, 2 ) );
                 res.end();
               }else{
@@ -473,6 +487,7 @@ async function UpdateFolderRecord( base_record, new_record, owner_id ){
           var query = { text: sql, values: [ ts, base_record.id, base_record.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
+              console.log( err );
               resolve( { status: false, error: err } );
             }else{
               //. new_record に含まれる要素のみで base_record を上書き
@@ -483,10 +498,11 @@ async function UpdateFolderRecord( base_record, new_record, owner_id ){
               });
 
               //. 新しいレコードを作成する
-              sql = "insert into records( id, parent_id, name, owner_id, is_folder, created, updated ) values( $1, $2, $3, $4, $5, $6, $7, $8, $9 )";
+              sql = "insert into records( id, parent_id, name, owner_id, is_folder, created, updated ) values( $1, $2, $3, $4, $5, $6, $7 )";
               query = { text: sql, values: [ base_record['id'], base_record['parent_id'], base_record['name'], base_record['owner_id'], 1, base_record['created'], ts ] };
               conn.query( query, function( err, result ){
                 if( err ){
+                  console.log( err );
                   resolve( { status: false, error: err } );
                 }else{
                   resolve( { status: true } );
@@ -575,7 +591,10 @@ async function GetRecord( id, refer_is_deleted ){
             var record = null;
             if( result.rows.length > 0 ){
               try{
-                record= result.rows[0];
+                record = result.rows[0];
+                record.created = parseInt( record.created );
+                record.updated = parseInt( record.updated );
+                //if( record.body ){ record.body = "...(" + record.body.length + ")..."; }
               }catch( e ){
               }
             }
@@ -616,6 +635,7 @@ async function GetRecords( parent_id, owner_id, refer_is_deleted ){
                 for( var i = 0; i < result.rows.length; i ++ ){
                   result.rows[i].created = parseInt( result.rows[i].created );
                   result.rows[i].updated = parseInt( result.rows[i].updated );
+                  //if( result.rows[i].body ){ result.rows[i].body = "...(" + result.rows[i].body.length + ")..."; }
                   records.push( result.rows[i] );
                 }
               }catch( e ){
@@ -784,7 +804,8 @@ async function addfile( file_path, contenttype, body, owner_id ){
         }else{
           var tmp = file_path.split( '/' );
           var filename = tmp.pop();;
-          var parent_folder_path = '/' + tmp.join( '/' );
+          var parent_folder_path = tmp.join( '/' );
+          if( parent_folder_path == '' ){ parent_folder_path = '/'; }
 
           folderpath2id( parent_folder_path, owner_id, true ).then( async function( r ){
             if( r && r.status && r.id ){
@@ -816,7 +837,8 @@ async function addfolder( folder_path, owner_id ){
           //folder_path = folder_path.substring( 0, folder_path.length - 1 );
           var tmp = folder_path.split( '/' );
           var foldername = tmp.pop();
-          var parent_folder_path = '/' + tmp.join( '/' );
+          var parent_folder_path = tmp.join( '/' );
+          if( parent_folder_path == '' ){ parent_folder_path = '/'; }
           folderpath2id( parent_folder_path, owner_id, true ).then( async function( r ){
             if( r && r.status && r.id ){
               var r = await AddFolderRecord( r.id, foldername, owner_id );
