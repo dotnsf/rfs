@@ -95,9 +95,21 @@ function execAPI(){
       });
     }
   }else{
-    var formdata = new FormData( $('#myform').get(0) );
+    var formdata = new FormData();
+    var name = $('#name').val();
+    formdata.append( 'name', name );
+    var folder_path = $('#folder_path').val();
+    formdata.append( 'path', folder_path );
+    var is_file = false;
+    try{
+      var f = $('input[type="file"]')[0].files[0];
+      formdata.append( 'file', f );
+      is_file = true;
+    }catch( e ){
+    }
+
     if( method == 'PUT' ){
-      if( formdata && formdata['file'] ){
+      if( is_file ){
         $.ajax({
           type: method,
           url: path,
@@ -112,10 +124,6 @@ function execAPI(){
           }
         });
       }else{
-        var name = $('#name').val();
-        formdata['name'] = name;
-        var folder_path = $('#folder_path').val();
-        formdata['path'] = folder_path;
         $.ajax({
           type: method,
           url: path,
