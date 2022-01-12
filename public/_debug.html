@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<title>Rest FileSystem - Test Form</title>
+<script type="text/javascript" src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+<link href="//use.fontawesome.com/releases/v5.8.1/css/all.css" rel="stylesheet"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Rest FileSystem"/>
+
+<style type="text/css">
+html, body{
+  text-align: center;
+  background-color: #fafafa;
+  font-size: 20px;
+  color: #333;
+}
+
+#restapi{
+  text-align: left;
+  font-weight: bold;
+}
+
+#result{
+  text-align: left;
+  color: #008;
+}
+</style>
+<script>
+$(function(){
+  $('#method').change( function(){
+    var method = $('#method').val();
+    if( method == 'PUT' ){
+      $('#tr_name').css( 'display', '' );
+      $('#tr_folder_path').css( 'display', '' );
+    }else{
+      $('#tr_name').css( 'display', 'none' );
+      $('#tr_folder_path').css( 'display', 'none' );
+    }
+  });
+
+  $('#path').keyup( function( e ){
+    var path = $('#path').val();
+    if( path.endsWith( '/' ) ){
+      $('#tr_file').css( 'display', 'none' );
+    }else{
+      $('#tr_file').css( 'display', '' );
+    }
+  });
+});
+
+function execAPI(){
+  var method = $('#method').val().toUpperCase();
+  var path = $('#path').val();
+  $('#restapi').html( method + ' ' + path );
+  $('#result_body').html( '' );
+
+  if( method == 'GET' || method == 'DELETE' || path.endsWith( '/' ) ){
+    if( method == 'PUT' ){
+      var formdata = {};
+      var name = $('#name').val();
+      formdata['name'] = name;
+      var folder_path = $('#folder_path').val();
+      formdata['path'] = folder_path;
+      $.ajax({
+        type: method,
+        url: path,
+        contentType: 'application/json',
+        dataType: 'json',
+        data: JSON.stringify( formdata ),
+        processData: false,
+        success: function( r ){
+          $('#result_body').html( JSON.stringify( r ) );
+        },
+        error: function( e0, e1, e2 ){
+          console.log( e0, e1, e2 );
+        }
+      });
+    }else{
+      $.ajax({
+        type: method,
+        url: path,
+        success: function( r ){
+          $('#result_body').html( JSON.stringify( r, null, 2 ) );
+        },
+        error: function( e0, e1, e2 ){
+          console.log( e0, e1, e2 );
+        }
+      });
+    }
+  }else{
+    var formdata = new FormData( $('#myform').get(0) );
+    if( method == 'PUT' ){
+      if( formdata && formdata['file'] ){
+        $.ajax({
+          type: method,
+          url: path,
+          data: formdata,
+          contentType: false,
+          processData: false,
+          success: function( r ){
+            $('#result_body').html( JSON.stringify( r, null, 2 ) );
+          },
+          error: function( e0, e1, e2 ){
+            console.log( e0, e1, e2 );
+          }
+        });
+      }else{
+        var name = $('#name').val();
+        formdata['name'] = name;
+        var folder_path = $('#folder_path').val();
+        formdata['path'] = folder_path;
+        $.ajax({
+          type: method,
+          url: path,
+          contentType: 'application/json',
+          dataType: 'json',
+          data: JSON.stringify( formdata ),
+          processData: false,
+          success: function( r ){
+            $('#result_body').html( JSON.stringify( r ) );
+          },
+          error: function( e0, e1, e2 ){
+            console.log( e0, e1, e2 );
+          }
+        });
+      }
+    }else{
+      $.ajax({
+        type: method,
+        url: path,
+        data: formdata,
+        contentType: false,
+        processData: false,
+        success: function( r ){
+          $('#result_body').html( JSON.stringify( r, null, 2 ) );
+        },
+        error: function( e0, e1, e2 ){
+          console.log( e0, e1, e2 );
+        }
+      });
+    }
+  }
+}
+</script>
+</head>
+<body>
+<div class="container">
+  <table class="table">
+    <tr>
+      <th>Method</th>
+      <td>
+        <select id="method" class="form-control">
+          <option value="GET" selected>GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </td>
+    </tr>
+    <form id="myform">
+    <tr>
+      <th>Path</th>
+      <td>
+        <input type="text" class="form-control" id="path" value="/"/>
+      </td>
+    </tr>
+    <tr id="tr_name" style="display:none;">
+      <th>New Name</th>
+      <td>
+        <input type="text" class="form-control" id="name" value=""/>
+      </td>
+    </tr>
+    <tr id="tr_folder_path" style="display:none;">
+      <th>New Folder Path</th>
+      <td>
+        <input type="text" class="form-control" id="folder_path" value=""/>
+      </td>
+    </tr>
+    <tr id="tr_file" style="display:none">
+      <th>File</th>
+      <td>
+        <input type="file" class="form-control" id="file" name="file"/>
+      </td>
+    </tr>
+    </form>
+    <tr>
+      <th>Execute</th>
+      <td>
+        <input type="button" class="btn btn-primary" id="execBtn" value="Execute" onClick="execAPI();"/>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="container" id="restapi">
+</div>
+
+<div class="container" id="result">
+<pre id="result_body">
+</pre>
+</div>
+</body>
+</html>
