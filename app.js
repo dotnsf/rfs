@@ -272,15 +272,19 @@ app.all( '/*', async function( req, res, next ){
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }else{
+            var filepath = '';
             if( req.file && req.file.path ){
               //. ファイル作成
               record.contenttype = req.file.mimetype;
-              var filepath = req.file.path;
+              filepath = req.file.path;
               record.body = fs.readFileSync( filepath );
             }
 
             //. ファイル更新
             var r = await editfile( path, record, owner_id );
+            if( filepath ){
+              fs.unlink( filepath, function( err ){} );
+            }
             if( !r.status ){
               res.status( 400 );
             }
