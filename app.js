@@ -123,7 +123,7 @@ app.get( '/__auth0/login', passport.authenticate( 'auth0', {
   res.redirect( '/__auth0' );
   //res.contentType( 'application/json; charset=utf-8' );
   //res.write( JSON.stringify( { status: true }, null, 2 ) );
-  //res.end();
+  res.end();
 }));
 
 //. logout
@@ -201,9 +201,7 @@ app.all( '/*', async function( req, res, next ){
           if( is_folder ){
             //. フォルダ作成
             var r = await addfolder( path, owner_id );
-            if( !r.status ){
-              res.status( 400 );
-            }
+            res.status( r.code );
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }else{
@@ -214,9 +212,7 @@ app.all( '/*', async function( req, res, next ){
 
             var r = await addfile( path, filetype, body, owner_id );
             fs.unlink( filepath, function( err ){} );
-            if( !r.status ){
-              res.status( 400 );
-            }
+            res.status( r.code );
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }
@@ -225,9 +221,7 @@ app.all( '/*', async function( req, res, next ){
           if( is_folder ){
             //. フォルダ取得
             var r = await folderpath2records( path, owner_id, refer_is_deleted );
-            if( !r.status ){
-              res.status( 400 );
-            }
+            res.status( r.code );
             if( r.records && r.records.length ){
               for( var i = 0; i < r.records.length; i ++ ){
                 if( r.records[i].body ){ r.records[i].body = "...(" + r.records[i].body.length + ")..."; }
@@ -239,7 +233,7 @@ app.all( '/*', async function( req, res, next ){
             //. ファイル取得
             var r = await filepath2record( path, owner_id, refer_is_deleted );
             if( !r.status ){
-              res.status( 400 );
+              res.status( r.code );
               res.write( JSON.stringify( r, null, 2 ) );
               res.end();
             }else{
@@ -274,9 +268,7 @@ app.all( '/*', async function( req, res, next ){
           if( is_folder ){
             //. フォルダ更新
             var r = await editfolder( path, record, owner_id );
-            if( !r.status ){
-              res.status( 400 );
-            }
+            res.status( r.code );
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }else{
@@ -293,9 +285,7 @@ app.all( '/*', async function( req, res, next ){
             if( filepath ){
               fs.unlink( filepath, function( err ){} );
             }
-            if( !r.status ){
-              res.status( 400 );
-            }
+            res.status( r.code );
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }
@@ -304,17 +294,13 @@ app.all( '/*', async function( req, res, next ){
           if( is_folder ){
             //. フォルダ削除
             var r = await deletefolder( path, owner_id );
-            if( !r.status ){
-              res.status( 400 );
-            }
+            res.status( r.code );
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }else{
             //. ファイル削除
             var r = await deletefile( path, owner_id );
-            if( !r.status ){
-              res.status( 400 );
-            }
+            res.status( r.code );
             res.write( JSON.stringify( r, null, 2 ) );
             res.end();
           }
@@ -364,17 +350,17 @@ async function AddFolderRecord( parent_id, name, owner_id ){
         query = { text: sql, values: [ id, parent_id, name, owner_id, 1, ts, ts ] };
         conn.query( query, function( err, result ){
           if( err ){
-            resolve( { status: false, error: err } );
+            resolve( { status: false, code: 400, error: err } );
           }else{
-            resolve( { status: true } );
+            resolve( { status: true, code: 200 } );
           }
         });
       }else{
-        resolve( { status: false, error: 'db not ready.' } );
+        resolve( { status: false, code: 400, error: 'db not ready.' } );
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }finally{
       conn.release();
     }
@@ -392,101 +378,17 @@ async function AddFileRecord( parent_id, name, contenttype, body, owner_id ){
         query = { text: sql, values: [ id, parent_id, name, owner_id, contenttype, body, 0, ts, ts ] };
         conn.query( query, function( err, result ){
           if( err ){
-            resolve( { status: false, error: err } );
+            resolve( { status: false, code: 400, error: err } );
           }else{
-            resolve( { status: true } );
+            resolve( { status: true, code: 200 } );
           }
         });
       }else{
-        resolve( { status: false, error: 'db not ready.' } );
+        resolve( { status: false, code: 400, error: 'db not ready.' } );
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
-    }finally{
-      conn.release();
-    }
-  });
-}
-
-async function EditFolderRecord( folder_id, parent_id, name, created, owner_id ){
-  return new Promise( async function( resolve, reject ){
-    try{
-      if( parent_id == undefined && name == undefined ){
-        resolve( { status: false, error: 'parent_id or name need to be defined.' } );
-      }else{
-        if( pg ){
-          conn = await pg.connect();
-          var ts = ( new Date() ).getTime();
-          sql = "insert into records( id";
-          values = [ folder_id ];
-          var n = 6;
-          if( parent_id !== undefined ){
-            sql += ", parent_id";
-            values.push( parent_id );
-            n ++;
-          }
-          if( name !== undefined ){
-            sql += ", name";
-            values.push( name );
-            n ++;
-          }
-          sql += ", owner_id, is_folder, created, updated ) values( $1, $2, $3, $4, $5";
-          for( var i = 6; i < n; i ++ ){
-            sql += ( ", $" + i );
-          }
-          sql += " )";
-
-          values.push( owner_id );
-          values.push( 1 );
-          values.push( created );
-          values.push( ts );
-
-          query = { text: sql, values: values };
-          conn.query( query, function( err, result ){
-            if( err ){
-              resolve( { status: false, error: err } );
-            }else{
-              resolve( { status: true } );
-            }
-          });
-        }else{
-          resolve( { status: false, error: 'db not ready.' } );
-        }
-      }
-    }catch( e ){
-      console.log( e );
-      resolve( { status: false, error: e } );
-    }finally{
-      conn.release();
-    }
-  });
-}
-
-async function EditFileRecord( file_id, parent_id, name, contenttype, body, created, owner_id ){
-  return new Promise( async function( resolve, reject ){
-    try{
-      if( pg ){
-        conn = await pg.connect();
-        var ts = ( new Date() ).getTime();
-        //. ただインサートするだけだと古いファイルが残ってしまう
-        //. id を変えずにアップデートするべき？
-        //. 古いファイルの削除フラグを ON にするべき？
-        sql = "insert into records( id, parent_id, name, owner_id, contenttype, body, is_folder, created, updated ) values( $1, $2, $3, $4, $5, $6, $7, $8, $9 )";
-        query = { text: sql, values: [ file_id, parent_id, name, owner_id, contenttype, body, 0, created, ts ] };
-        conn.query( query, function( err, result ){
-          if( err ){
-            resolve( { status: false, error: err } );
-          }else{
-            resolve( { status: true } );
-          }
-        });
-      }else{
-        resolve( { status: false, error: 'db not ready.' } );
-      }
-    }catch( e ){
-      console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }finally{
       conn.release();
     }
@@ -507,7 +409,7 @@ async function UpdateFolderRecord( base_record, new_record, owner_id ){
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
-              resolve( { status: false, error: err } );
+              resolve( { status: false, code: 400, error: err } );
             }else{
               //. new_record に含まれる要素のみで base_record を上書き
               Object.keys( new_record ).forEach( function( key ){
@@ -522,24 +424,24 @@ async function UpdateFolderRecord( base_record, new_record, owner_id ){
               conn.query( query, function( err, result ){
                 if( err ){
                   console.log( err );
-                  resolve( { status: false, error: err } );
+                  resolve( { status: false, code: 400, error: err } );
                 }else{
-                  resolve( { status: true } );
+                  resolve( { status: true, code: 200 } );
                 }
               });
             }
           });
         }else{
-          resolve( { status: false, error: 'db not ready.' } );
+          resolve( { status: false, code: 400, error: 'db not ready.' } );
         }
       }catch( e ){
         console.log( e );
-        resolve( { status: false, error: e } );
+        resolve( { status: false, code: 400, error: e } );
       }finally{
         conn.release();
       }
     }else{
-      resolve( { status: false, error: 'not owner.' } );
+      resolve( { status: false, code: 403, error: 'not owner.' } );
     }
   });
 }
@@ -557,7 +459,7 @@ async function UpdateFileRecord( base_record, new_record, owner_id ){
           var query = { text: sql, values: [ ts, base_record.id, base_record.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
-              resolve( { status: false, error: err } );
+              resolve( { status: false, code: 400, error: err } );
             }else{
               //. new_record に含まれる要素のみで base_record を上書き
               Object.keys( new_record ).forEach( function( key ){
@@ -571,24 +473,24 @@ async function UpdateFileRecord( base_record, new_record, owner_id ){
               query = { text: sql, values: [ base_record['id'], base_record['parent_id'], base_record['name'], base_record['owner_id'], base_record['contenttype'], base_record['body'], 0, base_record['created'], ts ] };
               conn.query( query, function( err, result ){
                 if( err ){
-                  resolve( { status: false, error: err } );
+                  resolve( { status: false, code: 400, error: err } );
                 }else{
-                  resolve( { status: true } );
+                  resolve( { status: true, code: 200 } );
                 }
               });
             }
           });
         }else{
-          resolve( { status: false, error: 'db not ready.' } );
+          resolve( { status: false, code: 400, error: 'db not ready.' } );
         }
       }catch( e ){
         console.log( e );
-        resolve( { status: false, error: e } );
+        resolve( { status: false, code: 400, error: e } );
       }finally{
         conn.release();
       }
     }else{
-      resolve( { status: false, error: 'not owner.' } );
+      resolve( { status: false, code: 403, error: 'not owner.' } );
     }
   });
 }
@@ -605,7 +507,7 @@ async function GetRecord( id, refer_is_deleted ){
         sql += ' order by updated desc';
         conn.query( sql, [ id ], function( err, result ){
           if( err ){
-            resolve( { status: false, error: err } );
+            resolve( { status: false, code: 400, error: err } );
           }else{
             var record = null;
             if( result.rows.length > 0 ){
@@ -617,7 +519,7 @@ async function GetRecord( id, refer_is_deleted ){
               }catch( e ){
               }
             }
-            resolve( { status: true, record: record } );
+            resolve( { status: true, code: 200, record: record } );
           }
         });
       }else{
@@ -625,7 +527,7 @@ async function GetRecord( id, refer_is_deleted ){
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }finally{
       conn.release();
     }
@@ -646,7 +548,7 @@ async function GetRecords( parent_id, owner_id, refer_is_deleted ){
         conn.query( sql, [ parent_id, owner_id ], function( err, result ){
           if( err ){
             console.log( err );
-            resolve( { status: false, error: err } );
+            resolve( { status: false, code: 400, error: err } );
           }else{
             var records = [];
             if( result.rows.length > 0 ){
@@ -661,15 +563,15 @@ async function GetRecords( parent_id, owner_id, refer_is_deleted ){
                 console.log( e );
               }
             }
-            resolve( { status: true, records: records } );
+            resolve( { status: true, code: 200, records: records } );
           }
         });
       }else{
-        resolve( { status: false, error: 'db not ready.' } );
+        resolve( { status: false, code: 400, error: 'db not ready.' } );
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }finally{
       conn.release();
     }
@@ -688,7 +590,7 @@ async function GetFileRecord( parent_id, name, owner_id, refer_is_deleted ){
         sql += ' order by updated desc';
         conn.query( sql, [ parent_id, name, owner_id ], function( err, result ){
           if( err ){
-            resolve( { status: false, error: err } );
+            resolve( { status: false, code: 400, error: err } );
           }else{
             var record = null;
             if( result.rows.length > 0 && result.rows[0].id ){
@@ -699,15 +601,15 @@ async function GetFileRecord( parent_id, name, owner_id, refer_is_deleted ){
               }catch( e ){
               }
             }
-            resolve( { status: true, record: record } );
+            resolve( { status: true, code: 200, record: record } );
           }
         });
       }else{
-        resolve( { status: false, error: 'db not ready.' } );
+        resolve( { status: false, code: 400, error: 'db not ready.' } );
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }finally{
       conn.release();
     }
@@ -726,7 +628,7 @@ function GetFolderRecord( parent_id, name, owner_id, refer_is_deleted ){
         sql += ' order by updated desc';
         conn.query( sql, [ parent_id, name, owner_id ], function( err, result ){
           if( err ){
-            resolve( { status: false, error: err } );
+            resolve( { status: false, code: 400, error: err } );
           }else{
             var record = null;
             if( result.rows.length > 0 && result.rows[0].id ){
@@ -737,15 +639,15 @@ function GetFolderRecord( parent_id, name, owner_id, refer_is_deleted ){
               }catch( e ){
               }
             }
-            resolve( { status: true, record: record } );
+            resolve( { status: true, code: 200, record: record } );
           }
         });
       }else{
-        resolve( { status: false, error: 'db not ready.' } );
+        resolve( { status: false, code: 400, error: 'db not ready.' } );
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }finally{
       conn.release();
     }
@@ -766,17 +668,17 @@ async function DeleteFolderRecord( parent_id, name, owner_id ){
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
-              resolve( { status: false, error: err } );
+              resolve( { status: false, code: 400, error: err } );
             }else{
-              resolve( { status: true } );
+              resolve( { status: true, code: 200 } );
             }
           });
         }else{
-          resolve( { status: false, error: 'db not ready.' } );
+          resolve( { status: false, code: 400, error: 'db not ready.' } );
         }
       }catch( e ){
         console.log( e );
-        resolve( { status: false, error: e } );
+        resolve( { status: false, code: 400, error: e } );
       }finally{
         conn.release();
       }
@@ -796,9 +698,9 @@ async function DeleteFileRecord( parent_id, name, owner_id ){
         query = { text: sql, values: [ ts, r.record.id, r.record.updated ] };
         conn.query( query, function( err, result ){
           if( err ){
-            resolve( { status: false, error: err } );
+            resolve( { status: false, code: 400, error: err } );
           }else{
-            resolve( { status: true } );
+            resolve( { status: true, code: 200 } );
           }
         });
       }else{
@@ -806,7 +708,7 @@ async function DeleteFileRecord( parent_id, name, owner_id ){
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }finally{
       conn.release();
     }
@@ -819,7 +721,7 @@ async function addfile( file_path, contenttype, body, owner_id ){
     try{
       filepath2id( file_path, owner_id, true ).then( function( r ){
         if( r && r.status && r.id ){
-          resolve( { status: false, error: 'file existed.' } );
+          resolve( { status: false, code: 400, error: 'file existed.' } );
         }else{
           var tmp = file_path.split( '/' );
           var filename = tmp.pop();;
@@ -835,13 +737,13 @@ async function addfile( file_path, contenttype, body, owner_id ){
             }
           }).catch( function( e ){
             console.log( e );
-            resolve( { status: false, error: e } );
+            resolve( { status: false, code: 400, error: e } );
           });
         }
       });
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -851,7 +753,7 @@ async function addfolder( folder_path, owner_id ){
     try{
       folderpath2id( folder_path, owner_id, true ).then( function( r ){
         if( r && r.status && r.id ){
-          resolve( { status: false, error: 'folder existed.' } );
+          resolve( { status: false, code: 400, error: 'folder existed.' } );
         }else{
           //folder_path = folder_path.substring( 0, folder_path.length - 1 );
           var tmp = folder_path.split( '/' );
@@ -863,19 +765,19 @@ async function addfolder( folder_path, owner_id ){
               var r = await AddFolderRecord( r.id, foldername, owner_id );
               resolve( r );
             }else{
-              resolve( { status: false, error: 'parent folder not found.' } );
+              resolve( { status: false, code: 404, error: 'parent folder not found.' } );
             }
           }).catch( function( e ){
             console.log( e );
-            resolve( { status: false, error: e } );
+            resolve( { status: false, code: 400, error: e } );
           });
         }
       }).catch( function( e ){
-        resolve( { status: false, error: e } );
+        resolve( { status: false, code: 400, error: e } );
       });
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -891,19 +793,19 @@ async function filepath2id( file_path, owner_id, refer_is_deleted ){
         if( r && r.status && r.id ){
           var r = await GetFileRecord( r.id, filename, owner_id, refer_is_deleted );
           if( r && r.status && r.record ){
-            resolve( { status: true, id: r.record.id } );
+            resolve( { status: true, code: 200, id: r.record.id } );
           }else{
-            resolve( { status: false, error: 'file not found.' } );
+            resolve( { status: false, code: 404, error: 'file not found.' } );
           }
         }else{
-          resolve( { status: false, error: 'folder not found.' } );
+          resolve( { status: false, code: 404, error: 'folder not found.' } );
         }
       }).catch( function( e ){
-        resolve( { status: false, error: e } );
+        resolve( { status: false, code: 400, error: e } );
       });
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -913,7 +815,7 @@ async function folderpath2id( folder_path, owner_id, refer_is_deleted ){
     //. '/' は name = '' で id = '0', parent_id = '' とする
     try{
       if( folder_path == '/' ){
-        resolve( { status: true, id: '0' } );
+        resolve( { status: true, code: 200, id: '0' } );
       }else{
         //if( folder_path.endsWith( '/' ) && folder_path.length > 1 ){
         //  folder_path = folder_path.substr( 0, folder_path.length - 1 );
@@ -937,14 +839,14 @@ async function folderpath2id( folder_path, owner_id, refer_is_deleted ){
         }
 
         if( b ){
-          resolve( { status: true, id: id } );
+          resolve( { status: true, code: 200, id: id } );
         }else{
-          resolve( { status: false, error: 'folder not found.' } );
+          resolve( { status: false, code: 404, error: 'folder not found.' } );
         }
       }
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -959,18 +861,18 @@ async function filepath2record( file_path, owner_id, refer_is_deleted ){
         if( !r || !r.status ){
           //console.log( r );
           //. ファイルは見つかるがレコードの取得に失敗
-          r = { status: false, error: 'record not found.' };
+          r = { status: false, code: 404, error: 'record not found.' };
         }
         resolve( r );
       }else{
         //. ファイルが見つからない
         //console.log( r );
-        resolve( { status: false, error: 'file not found.' } );
+        resolve( { status: false, code: 404, error: 'file not found.' } );
       }
     }catch( e ){
       //. 想定外エラー
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -985,18 +887,18 @@ async function folderpath2records( folder_path, owner_id, refer_is_deleted ){
         if( !r || !r.status ){
           //. フォルダは見つかるが子レコードの取得に失敗
           //console.log( r );
-          r = { status: false, error: 'records not found.' };
+          r = { status: false, code: 404, error: 'records not found.' };
         }
         resolve( r );
       }else{
         //. フォルダが見つからない
         //console.log( r );
-        resolve( { status: false, error: 'folder not found.' } );
+        resolve( { status: false, code: 404, error: 'folder not found.' } );
       }
     }catch( e ){
       //. 想定外エラー
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -1031,7 +933,7 @@ async function editfile( file_path, record, owner_id ){
       });
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -1066,7 +968,7 @@ async function editfolder( folder_path, record, owner_id ){
       });
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -1088,15 +990,15 @@ async function deletefile( file_path, owner_id ){
               resolve( r );
             }
           }).catch( function( e ){
-            resolve( { status: false, error: e } );
+            resolve( { status: false, code: 400, error: e } );
           });
         }else{
-          resolve( { status: false, error: 'file not existed.' } );
+          resolve( { status: false, code: 404, error: 'file not existed.' } );
         }
       });
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }
@@ -1107,7 +1009,7 @@ async function deletefolder( folder_path, owner_id ){
       folderpath2records( folder_path, owner_id, true ).then( function( r ){
         if( r && r.status && r.records.length ){
           //. 空でないフォルダは削除不可とする
-          resolve( { status: false, error: 'folder contains some.' } );
+          resolve( { status: false, code: 403, error: 'folder contains some.' } );
         }else{
           folderpath2id( folder_path, owner_id, true ).then( function( r ){
             if( r && r.status && r.id ){
@@ -1119,27 +1021,27 @@ async function deletefolder( folder_path, owner_id ){
                   var r = await DeleteFolderRecord( r.id, foldername, owner_id );
                   resolve( r );
                 }else{
-                  resolve( { status: false, error: 'parent folder not found.' } );
+                  resolve( { status: false, code: 404, error: 'parent folder not found.' } );
                 }
               }).catch( function( e ){
                 console.log( e );
-                resolve( { status: false, error: e } );
+                resolve( { status: false, code: 400, error: e } );
               });
             }else{
-              resolve( { status: false, error: 'folder not existed.' } );
+              resolve( { status: false, code: 403, error: 'folder not existed.' } );
             }
           }).catch( function( e ){
             console.log( e );
-            resolve( { status: false, error: e } );
+            resolve( { status: false, code: 400, error: e } );
           });
         }
       }).catch( function( e ){
         console.log( e );
-        resolve( { status: false, error: e } );
+        resolve( { status: false, code: 400, error: e } );
       });
     }catch( e ){
       console.log( e );
-      resolve( { status: false, error: e } );
+      resolve( { status: false, code: 400, error: e } );
     }
   });
 }

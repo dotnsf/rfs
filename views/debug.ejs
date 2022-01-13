@@ -80,6 +80,7 @@ function execAPI(){
         },
         error: function( e0, e1, e2 ){
           console.log( e0, e1, e2 );
+          $('#result_body').html( JSON.stringify( e0.responseJSON, null, 2 ) );
         }
       });
     }else{
@@ -91,6 +92,7 @@ function execAPI(){
         },
         error: function( e0, e1, e2 ){
           console.log( e0, e1, e2 );
+          $('#result_body').html( JSON.stringify( e0.responseJSON, null, 2 ) );
         }
       });
     }
@@ -121,6 +123,7 @@ function execAPI(){
           },
           error: function( e0, e1, e2 ){
             console.log( e0, e1, e2 );
+            $('#result_body').html( JSON.stringify( e0.responseJSON, null, 2 ) );
           }
         });
       }else{
@@ -136,6 +139,7 @@ function execAPI(){
           },
           error: function( e0, e1, e2 ){
             console.log( e0, e1, e2 );
+            $('#result_body').html( JSON.stringify( e0.responseJSON, null, 2 ) );
           }
         });
       }
@@ -151,6 +155,7 @@ function execAPI(){
         },
         error: function( e0, e1, e2 ){
           console.log( e0, e1, e2 );
+          $('#result_body').html( JSON.stringify( e0.responseJSON, null, 2 ) );
         }
       });
     }
