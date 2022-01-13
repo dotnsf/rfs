@@ -108,7 +108,7 @@ app.use( session( sess ) );
 app.use( passport.initialize() );
 app.use( passport.session() );
 
-app.get( '/__auth0', function( req, res ){
+app.get( '/__system/debug', function( req, res ){
   if( !req.user ){
     res.render( 'debug', { user: null } );
   }else{
@@ -117,28 +117,28 @@ app.get( '/__auth0', function( req, res ){
 });
 
 //. login
-app.get( '/__auth0/login', passport.authenticate( 'auth0', {
+app.get( '/__system/login', passport.authenticate( 'auth0', {
   scope: settings.auth0_scope
 }, function( req, res ){
-  res.redirect( '/__auth0' );
+  res.redirect( '/__system/debug' );
   //res.contentType( 'application/json; charset=utf-8' );
   //res.write( JSON.stringify( { status: true }, null, 2 ) );
   res.end();
 }));
 
 //. logout
-app.get( '/__auth0/logout', function( req, res ){
+app.get( '/__system/logout', function( req, res ){
   req.logout();
   //res.contentType( 'application/json; charset=utf-8' );
   //res.write( JSON.stringify( { status: true }, null, 2 ) );
   //res.end();
-  res.redirect( '/__auth0' );
+  res.redirect( '/__system/debug' );
 });
 
-app.get( '/__auth0/callback', async function( req, res, next ){
+app.get( '/__system/callback', async function( req, res, next ){
   passport.authenticate( 'auth0', function( err, user ){
     if( err ) return next( err );
-    if( !user ) return res.redirect( '/__auth0/login' );
+    if( !user ) return res.redirect( '/__system/login' );
 
     req.logIn( user, function( err ){
       if( err ) return next( err );
@@ -150,7 +150,7 @@ app.get( '/__auth0/callback', async function( req, res, next ){
       //res.contentType( 'application/json; charset=utf-8' );
       //res.write( JSON.stringify( { status: true, owner_id: owner_id }, null, 2 ) );
       //res.end();
-      res.redirect( '/__auth0' );
+      res.redirect( '/__system/debug' );
     })
   })( req, res, next );
 });
@@ -158,7 +158,7 @@ app.get( '/__auth0/callback', async function( req, res, next ){
 
 app.all( '/*', async function( req, res, next ){
   if( !req.user ){
-    res.redirect( '/__auth0/login' );
+    res.redirect( '/__system/login' );
   }else{
     var owner_id = req.user.id;
     if( owner_id && owner_id.startsWith( 'auth0|' ) ){
