@@ -4,8 +4,6 @@
 
 //. - [ ] is_deleted = 1 でも検索できる関数
 
-//. URL パラメータが req.originalUrl に含まれてしまう
-
 var express = require( 'express' ),
     multer = require( 'multer' ),
     bodyParser = require( 'body-parser' ),
@@ -62,6 +60,9 @@ app.use( bodyParser.json() );
 app.use( express.Router() );
 app.use( express.static( __dirname + '/public' ) );
 
+app.set( 'views', __dirname + '/views' );
+app.set( 'view engine', 'ejs' );
+
 //. env values
 var settings_auth0_callback_url = 'AUTH0_CALLBACK_URL' in process.env ? process.env.AUTH0_CALLBACK_URL : settings.auth0_callback_url; 
 var settings_auth0_client_id = 'AUTH0_CLIENT_ID' in process.env ? process.env.AUTH0_CLIENT_ID : settings.auth0_client_id; 
@@ -107,30 +108,37 @@ app.use( session( sess ) );
 app.use( passport.initialize() );
 app.use( passport.session() );
 
+app.get( '/__auth0', function( req, res ){
+  if( !req.user ){
+    res.render( 'debug', { user: null } );
+  }else{
+    res.render( 'debug', { user: req.user } );
+  }
+});
 
 //. login
-app.get( '/auth0/login', passport.authenticate( 'auth0', {
+app.get( '/__auth0/login', passport.authenticate( 'auth0', {
   scope: settings.auth0_scope
 }, function( req, res ){
-  //res.redirect( '/' );
-  res.contentType( 'application/json; charset=utf-8' );
-  res.write( JSON.stringify( { status: true }, null, 2 ) );
-  res.end();
+  res.redirect( '/__auth0' );
+  //res.contentType( 'application/json; charset=utf-8' );
+  //res.write( JSON.stringify( { status: true }, null, 2 ) );
+  //res.end();
 }));
 
 //. logout
-app.get( '/auth0/logout', function( req, res ){
+app.get( '/__auth0/logout', function( req, res ){
   req.logout();
-  //res.redirect('/');
-  res.contentType( 'application/json; charset=utf-8' );
-  res.write( JSON.stringify( { status: true }, null, 2 ) );
-  res.end();
+  //res.contentType( 'application/json; charset=utf-8' );
+  //res.write( JSON.stringify( { status: true }, null, 2 ) );
+  //res.end();
+  res.redirect( '/__auth0' );
 });
 
-app.get( '/auth0/callback', async function( req, res, next ){
+app.get( '/__auth0/callback', async function( req, res, next ){
   passport.authenticate( 'auth0', function( err, user ){
     if( err ) return next( err );
-    if( !user ) return res.redirect( '/auth0/login' );
+    if( !user ) return res.redirect( '/__auth0/login' );
 
     req.logIn( user, function( err ){
       if( err ) return next( err );
@@ -142,7 +150,7 @@ app.get( '/auth0/callback', async function( req, res, next ){
       //res.contentType( 'application/json; charset=utf-8' );
       //res.write( JSON.stringify( { status: true, owner_id: owner_id }, null, 2 ) );
       //res.end();
-      res.redirect( '/_debug.html' );
+      res.redirect( '/__auth0' );
     })
   })( req, res, next );
 });
@@ -150,7 +158,7 @@ app.get( '/auth0/callback', async function( req, res, next ){
 
 app.all( '/*', async function( req, res, next ){
   if( !req.user ){
-    res.redirect( '/auth0/login' );
+    res.redirect( '/__auth0/login' );
   }else{
     var owner_id = req.user.id;
     if( owner_id && owner_id.startsWith( 'auth0|' ) ){
@@ -236,8 +244,8 @@ app.all( '/*', async function( req, res, next ){
               res.end();
             }else{
               var record = r.record;
-              var meta = req.query.meta;
-              if( meta ){
+              var body = req.query.body;
+              if( !body ){
                 //delete record['body'];
                 if( record['body'] ){ record['body'] = "...(" + record['body'].length + ")..."; }
                 record['created'] = parseInt( record['created'] );
