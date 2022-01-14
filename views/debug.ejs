@@ -49,8 +49,10 @@ $(function(){
     var path = $('#path').val();
     if( path.endsWith( '/' ) ){
       $('#tr_file').css( 'display', 'none' );
+      $('#tr_is_shared').css( 'display', 'none' );
     }else{
       $('#tr_file').css( 'display', '' );
+      $('#tr_is_shared').css( 'display', '' );
     }
   });
 });
@@ -102,6 +104,8 @@ function execAPI(){
     formdata.append( 'name', name );
     var folder_path = $('#folder_path').val();
     formdata.append( 'path', folder_path );
+    var is_shared = $('#is_shared').val();
+    formdata.append( 'is_shared', is_shared );
     var is_file = false;
     try{
       var f = $('input[type="file"]')[0].files[0];
@@ -215,6 +219,12 @@ function execAPI(){
       <th>New Folder Path</th>
       <td>
         <input type="text" class="form-control" id="folder_path" value=""/>
+      </td>
+    </tr>
+    <tr id="tr_is_shared" style="display:none;">
+      <th>Is Shared</th>
+      <td>
+        <input type="text" class="form-control" id="is_shared" value="0"/>
       </td>
     </tr>
     <tr id="tr_file" style="display:none">

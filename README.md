@@ -7,7 +7,56 @@
 REST API 対応ファイルシステム
 
 
+## How to setup
+
+### Auth0
+
+- Client ID などの設定
+
+  - 環境変数または settings.js に以下を設定する
+
+    - `database_url` : PostgreSQL へ接続するための URL
+
+    - `auth0_callback_url` : Auth0 の OAuth コールバック URL
+
+    - `auth0_client_id` : Auth0 の ClientId 値
+
+    - `auth0_client_secret` : Auth0 の ClientSecret 値
+
+    - `auth0_domain` : Auth0 のドメイン
+
+    - `auth0_scope` : "openid profile email"
+
+- コールバックURL の設定
+
+  - 例えば `localhost:8080` で動かす場合、以下をコールバック URL に設定する
+
+    - `http://localhost:8080/__system/callback`
+
+
+
 ## API
+
+### システム予約リクエスト
+
+- `GET /__system/login`
+
+  - ログイン
+
+- `GET /__system/logout`
+
+  - ログアウト
+
+- `GET /__system/histories/:file_id`
+
+  - :file_id で示されるファイル（フォルダ）の変更履歴
+
+- `GET /__system/share/:id`
+
+  - :id で示されるファイルのシェア
+
+  - `body=1` のパラメータを付けるとバイナリ実体
+
 
 ### HTTP リクエスト
 
@@ -75,6 +124,8 @@ REST API 対応ファイルシステム
     - `name` : 新しいファイル名
 
     - `path` : 新しい親フォルダパス
+
+    - `shared` : 共有可(1)不可(0)
 
     - `file` : 新しいファイルバイナリ
 
