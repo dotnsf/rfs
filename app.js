@@ -2,8 +2,9 @@
 var express = require( 'express' ),
     multer = require( 'multer' ),
     bodyParser = require( 'body-parser' ),
-    fs = require( 'fs' ),
     ejs = require( 'ejs' ),
+    fs = require( 'fs' ),
+    redis = require( 'redis' ),
     session = require( 'express-session' ),
     uuidv1 = require( 'uuid/v1' ),
     app = express();
@@ -63,7 +64,19 @@ var settings_auth0_callback_url = 'AUTH0_CALLBACK_URL' in process.env ? process.
 var settings_auth0_client_id = 'AUTH0_CLIENT_ID' in process.env ? process.env.AUTH0_CLIENT_ID : settings.auth0_client_id; 
 var settings_auth0_client_secret = 'AUTH0_CLIENT_SECRET' in process.env ? process.env.AUTH0_CLIENT_SECRET : settings.auth0_client_secret; 
 var settings_auth0_domain = 'AUTH0_DOMAIN' in process.env ? process.env.AUTH0_DOMAIN : settings.auth0_domain; 
+var settings_redis_url = 'REDIS_URL' in process.env ? process.env.REDIS_URL : settings.redis_url; 
 var settings_debug_page = 'DEBUG_PAGE' in process.env ? process.env.DEBUG_PAGE : settings.debug_page; 
+
+//. Redis
+var redisClient = null;
+if( settings_redis_url ){
+  redisClient = redis.createClient( { url: settings_redis_url } );
+  redisClient.on( 'error', function( err ){
+    console.error( 'on error', err );
+    redisClient = redis.createClient( { url: settings_redis_url } );
+  });
+}
+
 
 //. Auth0
 var passport = require( 'passport' );
@@ -88,6 +101,7 @@ passport.deserializeUser( function( user, done ){
 });
 
 //. Session
+var RedisStore = require( 'connect-redis' )( session );
 var sess = {
   secret: 'RfsSecret',
   cookie: {
@@ -95,11 +109,12 @@ var sess = {
     maxAge: (7 * 24 * 60 * 60 * 1000)
   },
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: false
 };
-//if( redisClient ){
-//  sess.store = new RedisStore( { client: redisClient } );
-//}
+if( redisClient ){
+  sess.store = new RedisStore( { client: redisClient } );
+}
+
 app.use( session( sess ) );
 app.use( passport.initialize() );
 app.use( passport.session() );
