@@ -1,3 +1,5 @@
+exports.debug_page = '/__system/debug';
+
 exports.database_url = '';
 
 exports.auth0_callback_url = 'http://localhost:8080/__system/callback';

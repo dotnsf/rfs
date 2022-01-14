@@ -1,9 +1,4 @@
 //. app.js
-//.   - https://qiita.com/nogitsune413/items/f413268d01b4ea2394b1
-//.   - `select ra.file_id, ra.parent_id, ra.name, ra.updated from records as ra inner join (select file_id, parent_id, max(updated) as maxupdated from records group by file_id, parent_id) as rb on ra.file_id = rb.file_id and ra.parent_id = rb.parent_id and ra.updated = rb.maxupdated;`
-
-//. - [ ] is_deleted = 1 でも検索できる関数
-
 var express = require( 'express' ),
     multer = require( 'multer' ),
     bodyParser = require( 'body-parser' ),
@@ -68,6 +63,7 @@ var settings_auth0_callback_url = 'AUTH0_CALLBACK_URL' in process.env ? process.
 var settings_auth0_client_id = 'AUTH0_CLIENT_ID' in process.env ? process.env.AUTH0_CLIENT_ID : settings.auth0_client_id; 
 var settings_auth0_client_secret = 'AUTH0_CLIENT_SECRET' in process.env ? process.env.AUTH0_CLIENT_SECRET : settings.auth0_client_secret; 
 var settings_auth0_domain = 'AUTH0_DOMAIN' in process.env ? process.env.AUTH0_DOMAIN : settings.auth0_domain; 
+var settings_debug_page = 'DEBUG_PAGE' in process.env ? process.env.DEBUG_PAGE : settings.debug_page; 
 
 //. Auth0
 var passport = require( 'passport' );
@@ -109,7 +105,7 @@ app.use( passport.initialize() );
 app.use( passport.session() );
 
 //. Debug UI
-app.get( '/__system/debug', function( req, res ){
+app.get( settings_debug_page, function( req, res ){
   if( !req.user ){
     res.render( 'debug', { user: null } );
   }else{
@@ -121,7 +117,7 @@ app.get( '/__system/debug', function( req, res ){
 app.get( '/__system/login', passport.authenticate( 'auth0', {
   scope: settings.auth0_scope
 }, function( req, res ){
-  res.redirect( '/__system/debug' );
+  res.redirect( settings_debug_page );
   //res.contentType( 'application/json; charset=utf-8' );
   //res.write( JSON.stringify( { status: true }, null, 2 ) );
   res.end();
@@ -133,7 +129,7 @@ app.get( '/__system/logout', function( req, res ){
   //res.contentType( 'application/json; charset=utf-8' );
   //res.write( JSON.stringify( { status: true }, null, 2 ) );
   //res.end();
-  res.redirect( '/__system/debug' );
+  res.redirect( settings_debug_page );
 });
 
 //. OAuth callback
@@ -152,7 +148,7 @@ app.get( '/__system/callback', async function( req, res, next ){
       //res.contentType( 'application/json; charset=utf-8' );
       //res.write( JSON.stringify( { status: true, owner_id: owner_id }, null, 2 ) );
       //res.end();
-      res.redirect( '/__system/debug' );
+      res.redirect( settings_debug_page );
     })
   })( req, res, next );
 });

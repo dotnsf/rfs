@@ -145,6 +145,11 @@ REST API 対応ファイルシステム
 `/__system/` で始まるファイルパス／フォルダパスは予約語なので、ユーザーは使えません。
 
 
+## Reference
+
+- https://qiita.com/nogitsune413/items/f413268d01b4ea2394b1
+
+
 ## Licensing
 
 This code is licensed under MIT.
