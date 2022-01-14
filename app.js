@@ -183,21 +183,15 @@ app.get( '/__system/share/:id', async function( req, res, next ){
   res.contentType( 'application/json; charset=utf-8' );
 
   var id = req.params.id;
-  var body = req.query.body;
   var r = await id2record( id );
+
   res.status( r.code );
-  if( !body ){
-    if( r.record.body ){ r.record.body = "...(" + r.record.body.length + ")..."; }
+  if( r.status ){
+    res.contentType( r.record.contenttype );
+    res.end( r.record.body, 'binary' );
+  }else{
     res.write( JSON.stringify( r, null, 2 ) );
     res.end();
-  }else{
-    if( r.status ){
-      res.contentType( r.record.contenttype );
-      res.end( r.record.body, 'binary' );
-    }else{
-      res.write( JSON.stringify( r, null, 2 ) );
-      res.end();
-    }
   }
 });
 
