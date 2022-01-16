@@ -132,19 +132,20 @@ app.get( settings_debug_page, function( req, res ){
 app.get( '/__system/login', passport.authenticate( 'auth0', {
   scope: settings.auth0_scope
 }, function( req, res ){
-  res.redirect( settings_debug_page );
-  //res.contentType( 'application/json; charset=utf-8' );
-  //res.write( JSON.stringify( { status: true }, null, 2 ) );
+  res.contentType( 'application/json; charset=utf-8' );
+  res.write( JSON.stringify( { status: true }, null, 2 ) );
   res.end();
+  //res.redirect( settings_debug_page );
 }));
 
 //. Logout
 app.get( '/__system/logout', function( req, res ){
   req.logout();
-  //res.contentType( 'application/json; charset=utf-8' );
-  //res.write( JSON.stringify( { status: true }, null, 2 ) );
-  //res.end();
-  res.redirect( settings_debug_page );
+
+  res.contentType( 'application/json; charset=utf-8' );
+  res.write( JSON.stringify( { status: true }, null, 2 ) );
+  res.end();
+  //res.redirect( settings_debug_page );
 });
 
 //. OAuth callback
@@ -160,10 +161,10 @@ app.get( '/__system/callback', async function( req, res, next ){
         owner_id = owner_id.substr( 6 );
       }
 
-      //res.contentType( 'application/json; charset=utf-8' );
-      //res.write( JSON.stringify( { status: true, owner_id: owner_id }, null, 2 ) );
-      //res.end();
-      res.redirect( settings_debug_page );
+      res.contentType( 'application/json; charset=utf-8' );
+      res.write( JSON.stringify( { status: true, owner_id: owner_id, message: 'You can go ' + settings_debug_page + ' for GUI operation.' }, null, 2 ) );
+      res.end();
+      //res.redirect( settings_debug_page );
     })
   })( req, res, next );
 });

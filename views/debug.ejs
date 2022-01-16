@@ -57,6 +57,36 @@ $(function(){
   });
 });
 
+function systemLogin(){
+  location.href = '/__system/login';
+  /*
+  $.ajax({
+    type: 'GET',
+    url: '/__system/login',
+    success: function( r ){
+      console.log( 'systemLogin: success: ', r );
+    },
+    error: function( e0, e1, e2 ){
+      console.log( 'systemLogin: error: ', e0, e1, e2 );
+    }
+  });
+  */
+}
+
+function systemLogout(){
+  $.ajax({
+    type: 'GET',
+    url: '/__system/logout',
+    success: function( r ){
+      console.log( 'systemLogout: success: ', r );
+      location.href = location.href;
+    },
+    error: function( e0, e1, e2 ){
+      console.log( 'systemLogout: error: ', e0, e1, e2 );
+    }
+  });
+}
+
 function execAPI(){
   var method = $('#method').val().toUpperCase();
   var path = $('#path').val();
@@ -178,11 +208,11 @@ function execAPI(){
     <ul class="navbar-nav mr-auto">
 <% if( !user ){ %>
       <li class="navbar-item">
-        <a class="nav-link" href="/__system/login">Login</a>
+        <a class="nav-link" href="#" onClick="systemLogin();">Login</a>
       </li>
 <% }else{ %>
       <li class="navbar-item">
-        <a class="nav-link" href="/__system/logout">Logout</a>
+        <a class="nav-link" href="#" onClick="systemLogout();">Logout</a>
       </li>
 <% } %>
     </ul>
